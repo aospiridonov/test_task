@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pinput/pin_put/pin_put.dart';
+import 'package:pinput/pinput.dart';
+import 'package:test_task/bloc/event.dart';
 import 'package:test_task/bloc/state.dart';
 import 'package:test_task/repository/repository_implementation.dart';
 
@@ -13,7 +14,9 @@ class LoginPage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 56),
-          child: BlocProvider<LoginBloc>(create: (_) => LoginBloc(MockLoginRepositoryImplementation()), child: const LoginForm()),
+          child: BlocProvider<LoginBloc>(
+              create: (_) => LoginBloc(MockLoginRepositoryImplementation()),
+              child: const LoginForm()),
         ),
       );
 }
@@ -44,30 +47,42 @@ class _LoginFormState extends State<LoginForm> {
   @override
   void dispose() {
     pinController.dispose();
+    phoneController.dispose();
     super.dispose();
   }
 
-  //TODO show errors in any appropriate way (with dialog or as a red color text under the input field or any other way)
-
   void onPhoneSubmitted() {
-    //TODO add action
+    pinController.clear();
+    context.read<LoginBloc>().add(PhoneEnteredEvent(phoneController.text));
   }
 
   void onPinEntered() {
-    //TODO add action
+    context.read<LoginBloc>().add(CheckEnteredCode(pinController.text));
   }
 
-  void reenterPhone() {
-    //TODO add action
+  void onReenterPhone() {
+    context.read<LoginBloc>().add(ReenterPhoneEvent());
+    pinController.clear();
+  }
+
+  void onResendSms() {
+    context.read<LoginBloc>().add(ResendSmsEvent());
+    pinController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    const pinPutDecoration = BoxDecoration(
-      border: Border(
-        bottom: BorderSide(color: Colors.black, width: 2),
+    const defaultPinTheme = PinTheme(
+      width: 56,
+      height: 56,
+      textStyle: TextStyle(fontSize: 25.0, color: Colors.black),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.black, width: 2),
+        ),
       ),
     );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -75,7 +90,10 @@ class _LoginFormState extends State<LoginForm> {
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           child: BlocBuilder<LoginBloc, LoginState>(builder: (context, state) {
-            //TODO show progress when state.isLoading is true
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
             final columnChildren = <Widget>[];
             if (state is PhoneInputState) {
               columnChildren.addAll([
@@ -85,6 +103,7 @@ class _LoginFormState extends State<LoginForm> {
                   child: TextField(
                     controller: phoneController,
                     onSubmitted: (_) => onPhoneSubmitted(),
+                    decoration: InputDecoration(errorText: state.error),
                   ),
                 ),
                 ElevatedButton(
@@ -97,29 +116,39 @@ class _LoginFormState extends State<LoginForm> {
                 Text('The code was sent to ${state.phone}'),
                 Padding(
                   padding: const EdgeInsets.only(top: 16, bottom: 20),
-                  child: PinPut(
+                  child: Pinput(
                     controller: pinController,
                     keyboardType: TextInputType.number,
-                    fieldsCount: pinLength,
                     pinAnimationType: PinAnimationType.fade,
-                    textStyle: const TextStyle(fontSize: 25.0, color: Colors.black),
-                    fieldsAlignment: MainAxisAlignment.spaceEvenly,
                     separator: const SizedBox(width: 19),
                     separatorPositions: const [1, 2, 3],
-                    withCursor: true,
-                    submittedFieldDecoration: pinPutDecoration,
-                    selectedFieldDecoration: pinPutDecoration,
-                    followingFieldDecoration: pinPutDecoration,
+                    defaultPinTheme: defaultPinTheme,
+                    errorText: state.error,
+                    forceErrorState: (state.error != null),
                   ),
                 ),
+                if (state.error != null)
+                  ElevatedButton(
+                    onPressed: onResendSms,
+                    child: const Text('Resend SMS'),
+                  ),
                 ElevatedButton(
-                  onPressed: onPhoneSubmitted,
+                  onPressed: onPinEntered,
                   child: const Text('Continue'),
                 ),
-                TextButton(onPressed: reenterPhone, child: const Text('Change phone')),
+                TextButton(
+                  onPressed: onReenterPhone,
+                  child: const Text('Change phone'),
+                ),
               ]);
             } else {
-              columnChildren.add(const Text('Success'));
+              columnChildren.addAll([
+                const Text('Success'),
+                TextButton(
+                  onPressed: onReenterPhone,
+                  child: const Text('Logout'),
+                ),
+              ]);
             }
             return Column(
               children: columnChildren,

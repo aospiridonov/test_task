@@ -23,3 +23,7 @@ class SmsRequestedState extends LoginState {
 class LoginSuccessState extends LoginState {
   const LoginSuccessState() : super();
 }
+
+class LoginSuccessLoading extends LoginState {
+  const LoginSuccessLoading() : super(isLoading: true);
+}

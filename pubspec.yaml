@@ -17,10 +17,10 @@ dependencies:
     sdk: flutter
 
   #BLoC
-  flutter_bloc: ^7.0.1
+  flutter_bloc: ^8.0.1
   equatable: ^2.0.3
 
-  pinput: ^1.2.0
+  pinput: ^2.2.16
   cupertino_icons: ^1.0.2
 
 dev_dependencies:
